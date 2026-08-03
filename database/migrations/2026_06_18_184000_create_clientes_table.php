@@ -15,8 +15,6 @@ return new class extends Migration
             $table->string('telefono')->nullable();
             $table->string('correo')->nullable();
             $table->string('contacto')->nullable();
-            $table->boolean('es_preferente')->default(false);
-            $table->string('estatus')->default('activo');
             $table->timestamps();
         });
     }

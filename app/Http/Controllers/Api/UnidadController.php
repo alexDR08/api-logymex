@@ -16,9 +16,14 @@ class UnidadController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $unidades = Unidad::with('operador:id,name,email')->orderBy('numero_economico')->get();
+        $unidades = Unidad::with('operador:id,nombre,apellidos,email,telefono')
+            ->orderBy('numero_economico')
+            ->get();
 
-        return response()->json(['mensaje' => 'Unidades consultadas correctamente.', 'datos' => $unidades]);
+        return response()->json([
+            'mensaje' => 'Unidades consultadas correctamente.',
+            'datos' => $unidades,
+        ]);
     }
 
     public function registrar(Request $request): JsonResponse
@@ -29,7 +34,10 @@ class UnidadController extends Controller
 
         $unidad = Unidad::create($request->validate($this->reglas()));
 
-        return response()->json(['mensaje' => 'Unidad registrada correctamente.', 'datos' => $unidad->load('operador:id,name,email')], 201);
+        return response()->json([
+            'mensaje' => 'Unidad registrada correctamente.',
+            'datos' => $unidad->load('operador:id,nombre,apellidos,email,telefono'),
+        ], 201);
     }
 
     public function mostrar(Request $request, Unidad $unidad): JsonResponse
@@ -38,7 +46,10 @@ class UnidadController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        return response()->json(['mensaje' => 'Unidad consultada correctamente.', 'datos' => $unidad->load('operador:id,name,email')]);
+        return response()->json([
+            'mensaje' => 'Unidad consultada correctamente.',
+            'datos' => $unidad->load('operador:id,nombre,apellidos,email,telefono'),
+        ]);
     }
 
     public function actualizar(Request $request, Unidad $unidad): JsonResponse
@@ -49,7 +60,10 @@ class UnidadController extends Controller
 
         $unidad->update($request->validate($this->reglas(true, $unidad)));
 
-        return response()->json(['mensaje' => 'Unidad actualizada correctamente.', 'datos' => $unidad->load('operador:id,name,email')]);
+        return response()->json([
+            'mensaje' => 'Unidad actualizada correctamente.',
+            'datos' => $unidad->load('operador:id,nombre,apellidos,email,telefono'),
+        ]);
     }
 
     public function eliminar(Request $request, Unidad $unidad): JsonResponse
@@ -72,14 +86,13 @@ class UnidadController extends Controller
             'placas' => [$requerido, 'string', 'max:20', Rule::unique('unidades', 'placas')->ignore($unidad?->id)],
             'numero_economico' => [$requerido, 'string', 'max:50', Rule::unique('unidades', 'numero_economico')->ignore($unidad?->id)],
             'modelo' => ['nullable', 'string', 'max:100'],
-            'autocargante' => ['sometimes', 'boolean'],
             'estatus' => ['sometimes', Rule::in(['disponible', 'en_ruta', 'mantenimiento', 'inactiva'])],
         ];
     }
 
     private function puedeVer(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ventas']);
+        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ejecutivo_comercial']);
     }
 
     private function puedeGestionar(Request $request): bool
@@ -87,7 +100,7 @@ class UnidadController extends Controller
         return $request->user()->hasAnyRole(['director_general', 'jefe_logistica']);
     }
 
-    private function respuestaNoAutorizada(string $mensaje = 'No tienes permisos para realizar esta accion.'): JsonResponse
+    private function respuestaNoAutorizada(string $mensaje = 'No tienes permisos para realizar esta acción.'): JsonResponse
     {
         return response()->json(['mensaje' => $mensaje], 403);
     }

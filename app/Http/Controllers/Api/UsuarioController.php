@@ -15,7 +15,7 @@ class UsuarioController extends Controller
     private const ROLES_PERMITIDOS = [
         'director_general',
         'jefe_logistica',
-        'ventas',
+        'ejecutivo_comercial',
         'operador',
     ];
 
@@ -27,7 +27,7 @@ class UsuarioController extends Controller
 
         $usuarios = User::query()
             ->with('roles:id,name')
-            ->orderBy('name')
+            ->orderBy('nombre')
             ->get();
 
         return response()->json([
@@ -43,16 +43,23 @@ class UsuarioController extends Controller
         }
 
         $datos = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'apellidos' => ['nullable', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'rol' => ['required', Rule::in(self::ROLES_PERMITIDOS)],
+            'permisos' => ['nullable', 'array'],
         ]);
 
         $usuario = User::create([
-            'name' => $datos['name'],
-            'email' => $datos['email'],
+            'nombre' => $datos['nombre'],
+            'apellidos' => $datos['apellidos'] ?? null,
+            'telefono' => $datos['telefono'] ?? null,
+            'email' => $datos['email'] ?? null,
             'password' => Hash::make($datos['password']),
+            'rol' => $datos['rol'],
+            'permisos' => $datos['permisos'] ?? null,
         ]);
 
         Role::findOrCreate($datos['rol']);
@@ -84,9 +91,12 @@ class UsuarioController extends Controller
         }
 
         $reglas = [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'nombre' => ['sometimes', 'required', 'string', 'max:255'],
+            'apellidos' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'telefono' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'permisos' => ['sometimes', 'nullable', 'array'],
         ];
 
         if ($this->esDirectorGeneral($request->user())) {
@@ -96,8 +106,11 @@ class UsuarioController extends Controller
         $datos = $request->validate($reglas);
 
         $usuario->fill([
-            'name' => $datos['name'] ?? $usuario->name,
-            'email' => $datos['email'] ?? $usuario->email,
+            'nombre' => $datos['nombre'] ?? $usuario->nombre,
+            'apellidos' => array_key_exists('apellidos', $datos) ? $datos['apellidos'] : $usuario->apellidos,
+            'telefono' => array_key_exists('telefono', $datos) ? $datos['telefono'] : $usuario->telefono,
+            'email' => array_key_exists('email', $datos) ? $datos['email'] : $usuario->email,
+            'permisos' => array_key_exists('permisos', $datos) ? $datos['permisos'] : $usuario->permisos,
         ]);
 
         if (! empty($datos['password'])) {
@@ -107,6 +120,8 @@ class UsuarioController extends Controller
         $usuario->save();
 
         if ($this->esDirectorGeneral($request->user()) && isset($datos['rol'])) {
+            $usuario->rol = $datos['rol'];
+            $usuario->save();
             $usuario->syncRoles([$datos['rol']]);
         }
 
