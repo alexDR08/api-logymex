@@ -8,16 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['orden_servicio_id', 
-             'unidad_id', 
-             'operador_id', 
-             'ayudante_id', 
-             'domicilio', 
-             'fecha', 
-             'hora_inicio',
-             'hora_fin',
-             'estatus', 
-             'observaciones'])]
+#[Fillable([
+    'nombre',
+    'unidad_id',
+    'operador_id',
+    'fecha',
+    'hora_inicio',
+    'hora_fin',
+    'estatus',
+    'observaciones',
+])]
 class Ruta extends Model
 {
     use HasFactory;
@@ -29,9 +29,9 @@ class Ruta extends Model
         ];
     }
 
-    public function ordenServicio(): BelongsTo
+    public function ordenesServicio(): HasMany
     {
-        return $this->belongsTo(OrdenServicio::class);
+        return $this->hasMany(OrdenServicio::class);
     }
 
     public function unidad(): BelongsTo
@@ -42,11 +42,6 @@ class Ruta extends Model
     public function operador(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operador_id');
-    }
-
-    public function ayudante(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'ayudante_id');
     }
 
     public function incidencias(): HasMany

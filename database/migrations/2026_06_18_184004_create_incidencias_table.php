@@ -13,7 +13,6 @@ return new class extends Migration
             $table->foreignId('orden_servicio_id')->nullable()->constrained('ordenes_servicio')->nullOnDelete();
             $table->foreignId('ruta_id')->nullable()->constrained('rutas')->nullOnDelete();
             $table->foreignId('operador_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('ayudante_id')->nullable()->constrained('users')->nullOnDelete();
             $table->date('fecha');
             $table->string('motivo');
             $table->text('descripcion')->nullable();

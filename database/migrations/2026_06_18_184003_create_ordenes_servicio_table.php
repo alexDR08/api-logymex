@@ -8,23 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('servicios_programados', function (Blueprint $table) {
+        Schema::create('ordenes_servicio', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('orden_servicio_id')->nullable()->constrained('ordenes_servicio')->nullOnDelete();
             $table->foreignId('cliente_id')->constrained('clientes')->cascadeOnDelete();
+            $table->foreignId('ruta_id')->nullable()->constrained('rutas')->nullOnDelete();
             $table->foreignId('unidad_id')->nullable()->constrained('unidades')->nullOnDelete();
             $table->foreignId('operador_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->date('fecha');
-            $table->time('hora')->nullable();
+            $table->string('folio')->unique();
+            $table->text('descripcion')->nullable();
+            $table->timestamp('programacion')->nullable();
             $table->string('estatus')->default('pendiente');
-            $table->string('color_calendario')->default('amarillo');
             $table->text('observaciones')->nullable();
+            $table->timestamp('completado_en')->nullable();
+            $table->timestamp('cancelado_en')->nullable();
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('servicios_programados');
+        Schema::dropIfExists('ordenes_servicio');
     }
 };

@@ -14,7 +14,6 @@ return new class extends Migration
             $table->string('placas')->unique();
             $table->string('numero_economico')->unique();
             $table->string('modelo')->nullable();
-            $table->boolean('autocargante')->default(false);
             $table->string('estatus')->default('disponible');
             $table->timestamps();
         });

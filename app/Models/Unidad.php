@@ -8,7 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+<<<<<<< HEAD
 #[Fillable(['operador_id', 'placas', 'numero_economico', 'marca', 'modelo', 'tipo_servicio', 'estatus'])]
+=======
+#[Fillable(['operador_id', 
+            'placas', 
+            'numero_economico', 
+            'modelo', 
+            'estatus'])]
+            
+>>>>>>> 6c520b196f7a6fe93dc8c5965e5abb67d6cdea03
 class Unidad extends Model
 {
     use HasFactory;
@@ -23,5 +32,10 @@ class Unidad extends Model
     public function rutas(): HasMany
     {
         return $this->hasMany(Ruta::class);
+    }
+
+    public function ordenesServicio(): HasMany
+    {
+        return $this->hasMany(OrdenServicio::class);
     }
 }
