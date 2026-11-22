@@ -8,19 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['operador_id', 'placas', 'numero_economico', 'modelo', 'autocargante', 'estatus'])]
+#[Fillable(['operador_id', 'placas', 'numero_economico', 'marca', 'modelo', 'tipo_servicio', 'estatus'])]
 class Unidad extends Model
 {
     use HasFactory;
 
     protected $table = 'unidades';
-
-    protected function casts(): array
-    {
-        return [
-            'autocargante' => 'boolean',
-        ];
-    }
 
     public function operador(): BelongsTo
     {

@@ -25,6 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{usuario}', [UsuarioController::class, 'eliminar']);
     });
 
+    /*consultar roles
+    Route::prefix('roles')->group(function(){
+        Route::get('/', [RolController::class, 'listar']);
+
+    });*/       
+
     Route::prefix('clientes')->group(function () {
         Route::get('/', [ClienteController::class, 'listar']);
         Route::post('/', [ClienteController::class, 'registrar']);

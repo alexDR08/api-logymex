@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'telefono', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,6 +33,11 @@ class User extends Authenticatable
     public function ordenesAsignadas(): HasMany
     {
         return $this->hasMany(OrdenServicio::class, 'operador_id');
+    }
+
+    public function ordenesComoEjecutivoVentas(): HasMany
+    {
+        return $this->hasMany(OrdenServicio::class, 'ejecutivo_ventas_id');
     }
 
     public function rutasAsignadas(): HasMany

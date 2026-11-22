@@ -3,14 +3,23 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\OrdenServicio;
 use App\Models\Ruta;
+use App\Models\Unidad;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class RutaController extends Controller
 {
-    private const ESTATUS = ['pendiente', 'asignada', 'en_ruta', 'completada', 'cancelada'];
+    private const ESTATUS = ['pendiente', 'iniciada', 'pausada', 'finalizada'];
+
+    private const TRANSICIONES_OPERADOR = [
+        'pendiente' => ['iniciada'],
+        'iniciada' => ['pausada', 'finalizada'],
+        'pausada' => ['iniciada'],
+        'finalizada' => [],
+    ];
 
     public function listar(Request $request): JsonResponse
     {
@@ -18,7 +27,7 @@ class RutaController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $rutas = Ruta::with(['ordenServicio.cliente', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])
+        $rutas = Ruta::with(['ordenServicio.cliente', 'ordenServicio.residuos', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])
             ->when($request->user()->hasRole('operador'), fn ($query) => $query->where('operador_id', $request->user()->id))
             ->orderByDesc('fecha')
             ->get();
@@ -32,9 +41,16 @@ class RutaController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $ruta = Ruta::create($request->validate($this->reglas()));
+        $datos = $request->validate($this->reglas());
 
-        return response()->json(['mensaje' => 'Ruta registrada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])], 201);
+        $error = $this->validarUnidadCompatibleConTipoServicio($datos['unidad_id'] ?? null, $datos['orden_servicio_id'] ?? null);
+        if ($error) {
+            return response()->json(['mensaje' => $error], 422);
+        }
+
+        $ruta = Ruta::create($datos);
+
+        return response()->json(['mensaje' => 'Ruta registrada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'ordenServicio.residuos', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])], 201);
     }
 
     public function mostrar(Request $request, Ruta $ruta): JsonResponse
@@ -43,7 +59,7 @@ class RutaController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        return response()->json(['mensaje' => 'Ruta consultada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email', 'incidencias'])]);
+        return response()->json(['mensaje' => 'Ruta consultada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'ordenServicio.residuos', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email', 'incidencias'])]);
     }
 
     public function actualizar(Request $request, Ruta $ruta): JsonResponse
@@ -56,9 +72,19 @@ class RutaController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $ruta->update($request->validate($this->reglas(true)));
+        $datos = $request->validate($this->reglas(true));
 
-        return response()->json(['mensaje' => 'Ruta actualizada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])]);
+        $unidadId = array_key_exists('unidad_id', $datos) ? $datos['unidad_id'] : $ruta->unidad_id;
+        $ordenServicioId = array_key_exists('orden_servicio_id', $datos) ? $datos['orden_servicio_id'] : $ruta->orden_servicio_id;
+
+        $error = $this->validarUnidadCompatibleConTipoServicio($unidadId, $ordenServicioId);
+        if ($error) {
+            return response()->json(['mensaje' => $error], 422);
+        }
+
+        $ruta->update($datos);
+
+        return response()->json(['mensaje' => 'Ruta actualizada correctamente.', 'datos' => $ruta->load(['ordenServicio.cliente', 'ordenServicio.residuos', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email'])]);
     }
 
     public function eliminar(Request $request, Ruta $ruta): JsonResponse
@@ -79,13 +105,24 @@ class RutaController extends Controller
         }
 
         $datos = $request->validate([
-            'estatus' => ['required', Rule::in(['completada', 'cancelada'])],
+            'estatus' => ['required', Rule::in(self::ESTATUS)],
             'observaciones' => ['nullable', 'string'],
         ]);
 
+        $transicionesValidas = self::TRANSICIONES_OPERADOR[$ruta->estatus] ?? [];
+
+        if (! in_array($datos['estatus'], $transicionesValidas, true)) {
+            return response()->json([
+                'mensaje' => "No puedes cambiar el estatus de la ruta de '{$ruta->estatus}' a '{$datos['estatus']}'.",
+            ], 422);
+        }
+
         $ruta->update($datos);
 
-        return response()->json(['mensaje' => 'Estatus de ruta actualizado correctamente.', 'datos' => $ruta]);
+        return response()->json([
+            'mensaje' => 'Estatus de ruta actualizado correctamente.',
+            'datos' => $ruta->load(['ordenServicio.cliente', 'ordenServicio.residuos', 'unidad', 'operador:id,name,email', 'ayudante:id,name,email']),
+        ]);
     }
 
     private function reglas(bool $actualizar = false): array
@@ -108,7 +145,7 @@ class RutaController extends Controller
 
     private function puedeVer(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ventas', 'operador']);
+        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'operador']);
     }
 
     private function puedeVerRuta(Request $request, Ruta $ruta): bool
@@ -123,6 +160,27 @@ class RutaController extends Controller
     private function puedeGestionar(Request $request): bool
     {
         return $request->user()->hasAnyRole(['director_general', 'jefe_logistica']);
+    }
+
+    private function validarUnidadCompatibleConTipoServicio(?int $unidadId, ?int $ordenServicioId): ?string
+    {
+        if (! $unidadId) {
+            return null;
+        }
+
+        $unidad = Unidad::find($unidadId);
+
+        if (! $unidad || $unidad->tipo_servicio !== 'RPBI') {
+            return null;
+        }
+
+        $tipoServicioOrden = $ordenServicioId ? OrdenServicio::find($ordenServicioId)?->tipo_servicio : null;
+
+        if ($tipoServicioOrden !== 'RPBI') {
+            return 'La unidad seleccionada es exclusiva para servicios de tipo RPBI.';
+        }
+
+        return null;
     }
 
     private function respuestaNoAutorizada(string $mensaje = 'No tienes permisos para realizar esta accion.'): JsonResponse

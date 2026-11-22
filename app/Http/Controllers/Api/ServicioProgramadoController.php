@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\OrdenServicio;
 use App\Models\ServicioProgramado;
+use App\Models\Unidad;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,7 +34,14 @@ class ServicioProgramadoController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $servicioProgramado = ServicioProgramado::create($request->validate($this->reglas()));
+        $datos = $request->validate($this->reglas());
+
+        $error = $this->validarUnidadCompatibleConTipoServicio($datos['unidad_id'] ?? null, $datos['orden_servicio_id'] ?? null);
+        if ($error) {
+            return response()->json(['mensaje' => $error], 422);
+        }
+
+        $servicioProgramado = ServicioProgramado::create($datos);
 
         return response()->json(['mensaje' => 'Servicio programado registrado correctamente.', 'datos' => $servicioProgramado->load(['ordenServicio', 'cliente', 'unidad', 'operador:id,name,email'])], 201);
     }
@@ -56,7 +65,17 @@ class ServicioProgramadoController extends Controller
             return $this->respuestaNoAutorizada();
         }
 
-        $servicioProgramado->update($request->validate($this->reglas(true)));
+        $datos = $request->validate($this->reglas(true));
+
+        $unidadId = array_key_exists('unidad_id', $datos) ? $datos['unidad_id'] : $servicioProgramado->unidad_id;
+        $ordenServicioId = array_key_exists('orden_servicio_id', $datos) ? $datos['orden_servicio_id'] : $servicioProgramado->orden_servicio_id;
+
+        $error = $this->validarUnidadCompatibleConTipoServicio($unidadId, $ordenServicioId);
+        if ($error) {
+            return response()->json(['mensaje' => $error], 422);
+        }
+
+        $servicioProgramado->update($datos);
 
         return response()->json(['mensaje' => 'Servicio programado actualizado correctamente.', 'datos' => $servicioProgramado->load(['ordenServicio', 'cliente', 'unidad', 'operador:id,name,email'])]);
     }
@@ -79,7 +98,7 @@ class ServicioProgramadoController extends Controller
         }
 
         $datos = $request->validate([
-            'estatus' => ['required', Rule::in(['completado', 'cancelado_por_incidencia'])],
+            'estatus' => ['required', Rule::in(['completado', 'cancelado'])],
             'observaciones' => ['nullable', 'string'],
         ]);
 
@@ -100,7 +119,7 @@ class ServicioProgramadoController extends Controller
             'operador_id' => ['nullable', 'exists:users,id'],
             'fecha' => [$requerido, 'date'],
             'hora' => ['nullable', 'date_format:H:i'],
-            'estatus' => ['sometimes', Rule::in(['pendiente', 'asignado', 'en_ruta', 'en_proceso', 'completado', 'cancelado_por_incidencia'])],
+            'estatus' => ['sometimes', Rule::in(['pendiente', 'asignado', 'en_ruta', 'en_proceso', 'completado', 'cancelado'])],
             'color_calendario' => ['sometimes', Rule::in(['amarillo', 'verde', 'rojo'])],
             'observaciones' => ['nullable', 'string'],
         ];
@@ -123,6 +142,31 @@ class ServicioProgramadoController extends Controller
     private function puedeGestionar(Request $request): bool
     {
         return $request->user()->hasAnyRole(['director_general', 'jefe_logistica']);
+    }
+
+    private function validarUnidadCompatibleConTipoServicio(?int $unidadId, ?int $ordenServicioId): ?string
+    {
+        if (! $unidadId) {
+            return null;
+        }
+
+        $unidad = Unidad::find($unidadId);
+
+        if (! $unidad || $unidad->tipo_servicio !== 'RPBI') {
+            return null;
+        }
+
+        if (! $ordenServicioId) {
+            return null;
+        }
+
+        $tipoServicioOrden = OrdenServicio::find($ordenServicioId)?->tipo_servicio;
+
+        if ($tipoServicioOrden !== 'RPBI') {
+            return 'La unidad seleccionada es exclusiva para servicios de tipo RPBI.';
+        }
+
+        return null;
     }
 
     private function respuestaNoAutorizada(string $mensaje = 'No tienes permisos para realizar esta accion.'): JsonResponse

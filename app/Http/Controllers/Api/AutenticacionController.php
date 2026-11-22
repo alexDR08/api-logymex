@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,15 +14,17 @@ class AutenticacionController extends Controller
     public function iniciarSesion(Request $request): JsonResponse
     {
         $credenciales = $request->validate([
-            'email' => ['required', 'email'],
+            'identificador' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        $usuario = \App\Models\User::where('email', $credenciales['email'])->first();
+        $usuario = User::where('email', $credenciales['identificador'])
+            ->orWhere('telefono', $credenciales['identificador'])
+            ->first();
 
         if (! $usuario || ! Hash::check($credenciales['password'], $usuario->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Las credenciales no son correctas.'],
+                'identificador' => ['Las credenciales no son correctas.'],
             ]);
         }
 

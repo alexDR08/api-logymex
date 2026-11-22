@@ -90,7 +90,7 @@ class IncidenciaController extends Controller
 
     private function puedeVer(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ventas', 'operador']);
+        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'operador']);
     }
 
     private function puedeVerIncidencia(Request $request, Incidencia $incidencia): bool

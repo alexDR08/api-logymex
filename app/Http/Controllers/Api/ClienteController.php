@@ -82,7 +82,7 @@ class ClienteController extends Controller
 
     private function puedeVer(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ventas']);
+        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica']);
     }
 
     private function puedeGestionar(Request $request): bool

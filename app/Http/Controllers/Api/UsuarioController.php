@@ -44,14 +44,22 @@ class UsuarioController extends Controller
 
         $datos = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
             'rol' => ['required', Rule::in(self::ROLES_PERMITIDOS)],
+            'email' => [
+                Rule::requiredIf(fn () => $request->input('rol') !== 'operador'),
+                'nullable', 'email', 'max:255', 'unique:users,email',
+            ],
+            'telefono' => [
+                Rule::requiredIf(fn () => $request->input('rol') === 'operador'),
+                'nullable', 'string', 'max:20', 'unique:users,telefono',
+            ],
+            'password' => ['required', 'string', 'min:8'],
         ]);
 
         $usuario = User::create([
             'name' => $datos['name'],
-            'email' => $datos['email'],
+            'email' => $datos['email'] ?? null,
+            'telefono' => $datos['telefono'] ?? null,
             'password' => Hash::make($datos['password']),
         ]);
 
@@ -85,7 +93,8 @@ class UsuarioController extends Controller
 
         $reglas = [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'telefono' => ['sometimes', 'nullable', 'string', 'max:20', Rule::unique('users', 'telefono')->ignore($usuario->id)],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
         ];
 
@@ -97,7 +106,8 @@ class UsuarioController extends Controller
 
         $usuario->fill([
             'name' => $datos['name'] ?? $usuario->name,
-            'email' => $datos['email'] ?? $usuario->email,
+            'email' => array_key_exists('email', $datos) ? $datos['email'] : $usuario->email,
+            'telefono' => array_key_exists('telefono', $datos) ? $datos['telefono'] : $usuario->telefono,
         ]);
 
         if (! empty($datos['password'])) {

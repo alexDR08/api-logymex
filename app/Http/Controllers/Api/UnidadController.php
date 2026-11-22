@@ -71,15 +71,16 @@ class UnidadController extends Controller
             'operador_id' => ['nullable', 'exists:users,id'],
             'placas' => [$requerido, 'string', 'max:20', Rule::unique('unidades', 'placas')->ignore($unidad?->id)],
             'numero_economico' => [$requerido, 'string', 'max:50', Rule::unique('unidades', 'numero_economico')->ignore($unidad?->id)],
+            'marca' => ['nullable', 'string', 'max:100'],
             'modelo' => ['nullable', 'string', 'max:100'],
-            'autocargante' => ['sometimes', 'boolean'],
+            'tipo_servicio' => ['nullable', 'string', 'max:255'],
             'estatus' => ['sometimes', Rule::in(['disponible', 'en_ruta', 'mantenimiento', 'inactiva'])],
         ];
     }
 
     private function puedeVer(Request $request): bool
     {
-        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica', 'ventas']);
+        return $request->user()->hasAnyRole(['director_general', 'jefe_logistica']);
     }
 
     private function puedeGestionar(Request $request): bool

@@ -35,7 +35,7 @@ class UsuarioSeeder extends Seeder
             ],
             [
                 'nombre' => 'Operador Logymex',
-                'email' => 'operador@logymex.test',
+                'telefono' => '8180001111',
                 'password' => 'password123',
                 'rol' => 'operador',
             ],
@@ -44,13 +44,16 @@ class UsuarioSeeder extends Seeder
         foreach ($usuarios as $datosUsuario) {
             $rol = Role::findOrCreate($datosUsuario['rol']);
 
-            $usuario = User::updateOrCreate(
-                ['email' => $datosUsuario['email']],
-                [
-                    'name' => $datosUsuario['nombre'],
-                    'password' => Hash::make($datosUsuario['password']),
-                ]
-            );
+            $llaveUnica = isset($datosUsuario['email'])
+                ? ['email' => $datosUsuario['email']]
+                : ['telefono' => $datosUsuario['telefono']];
+
+            $usuario = User::updateOrCreate($llaveUnica, [
+                'name' => $datosUsuario['nombre'],
+                'email' => $datosUsuario['email'] ?? null,
+                'telefono' => $datosUsuario['telefono'] ?? null,
+                'password' => Hash::make($datosUsuario['password']),
+            ]);
 
             $usuario->syncRoles([$rol]);
         }
